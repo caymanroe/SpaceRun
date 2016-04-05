@@ -131,7 +131,7 @@ SpaceRun.Game.prototype = {
 	
 		//insert and tween opacity out
 		this.game.world.add(wbackground);
-		this.game.add.tween(wbackground).to({alpha: 0}, 200, Phaser.Easing.Linear.None, true, 0, 0, false);
+		this.game.add.tween(wbackground).to({alpha: 0}, 350, Phaser.Easing.Linear.None, true, 0, 0, false);
 
 
 
