@@ -1,4 +1,4 @@
-var Fireball = function(game, x, y, key, frame) {
+var Fireball = function(game, x, y, speed, key, frame) {
 
 	//Setting key to 'flames', same as asset key in preload.
 	key = 'flames';
@@ -9,8 +9,12 @@ var Fireball = function(game, x, y, key, frame) {
 	//Center the anchor point.
 	this.anchor.setTo(0.5);
 
+	//Assigning speed of newly created fireball to what was passed in from leveling system in game state
+	this.speed = speed;
+
 	//Creating a new animation called 'fire'. Fire will follow the default order of frames as specified in the preloader.
 	this.animations.add('fire', [0,1,2,3,2,1]);
+	
 	//Enable as physics body for when the ship collides.
 	this.game.physics.arcade.enableBody(this);
 	
@@ -40,7 +44,7 @@ Fireball.prototype.onRevived = function() {
 	//This is a tween that moves the fireball up and down slightly
 	this.game.add.tween(this).to({y: this.y - 15}, 500, Phaser.Easing.Linear.NONE, true, 0, Infinity, true)
 	//Setting the speed of the fireball
-	this.body.velocity.x = -650;
+	this.body.velocity.x = this.speed;
 	//Start the animation at 15fps
 	this.animations.play('fire', 15, true);
 };

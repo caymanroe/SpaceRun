@@ -1,5 +1,5 @@
 //New Diamond class. Takes a reference to the gane, x, y, key and frame
-var Diamond = function(game, x, y, key, frame) {
+var Diamond = function(game, x, y, speed, key, frame) {
 
 	//Setting key to 'diamond', same as asset key in preload.
 	key = 'diamonds';
@@ -9,6 +9,9 @@ var Diamond = function(game, x, y, key, frame) {
 	this.scale.setTo(0.3);
 	//Center the anchor point.
 	this.anchor.setTo(0.5);
+
+	//Assigning speed of newly created fireball to what was passed in from leveling system in game state
+	this.speed = speed;
 
 	//Creating a new animation called 'spin'. Spin will follow the default order of frames as specified in the preloader.
 	this.animations.add('spin');
@@ -34,7 +37,7 @@ Diamond.prototype.constructor = Diamond;
 //Diamond on revived method.
 Diamond.prototype.onRevived = function() {
 	//When a diamond is revived, set speed to the same as the ground speed (450)
-	this.body.velocity.x = -450;
+	this.body.velocity.x = this.speed;
 	//Also play the spin animation.
 	this.animations.play('spin', 20, true);
 };

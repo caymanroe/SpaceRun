@@ -12,8 +12,14 @@ SpaceRun.Game = function() {
 	//Every 2000ms, generate a new fireball. This is slow at first but this speeds up over time.
 	this.fireballRate = 2000;
 
+	//Speed of fireballs when starting
+	this.fireSpeed = -500;
+
+	//Speed of diamonds when starting
+	this.diamondSpeed = -450;
+
 	//Was trying to get the number fireballs to be dependant on the height of the screen..
-	//This makes it fairer for someone with a very big screen... couldn't get it to work.
+	//This makes it fairer for someone with a very big screen... couldn't get it to work..
 	//this.fireballRate = this.game.width/0.55;
 
 	//Fireball timer user every game loop to check if a fireball was made.
@@ -27,6 +33,9 @@ SpaceRun.Game = function() {
 	this.diamondSpawnX = null;
 	this.diamondSpacingX = 10;
 	this.diamondSpacingY = 10;
+
+	//set floor speed
+	this.floorSpeed = -450;
 };
 
 //Extend the game prototype
@@ -40,17 +49,17 @@ SpaceRun.Game.prototype = {
 		//Adding the first background image to the game. Setting the height to 500px.
 		this.background = this.game.add.tileSprite(0, 0, this.game.width, 512, 'background');
 		//Scroll the background on the X axis.
-		this.background.autoScroll(-200, 0);
+		this.background.autoScroll(this.floorSpeed+250, 0);
 
 		//Adding the next background image near the bottom of the page.
 		this.foreground = this.game.add.tileSprite(0, 470, this.game.width, this.game.height - 533, 'foreground');
 		//Auto scroll again at the same speed.
-		this.foreground.autoScroll(-200, 0);
+		this.foreground.autoScroll(this.floorSpeed+250, 0);
 		
 		//Adding the very bottom ground sprite to the game and tiling it horizontally with a max height of 73px.
 		this.ground = this.game.add.tileSprite(0, this.game.height - 73, this.game.width, 73, 'ground');
 		//Auto scroll much faster to create a 'parallax' effect.
-		this.ground.autoScroll(-450, 0);
+		this.ground.autoScroll(this.floorSpeed, 0);
 		
 		//Add the spaceship to the game using the spritesheet that was preloaded.
 		//Positioning the X position to 200, and the Y to the middle.
@@ -95,6 +104,24 @@ SpaceRun.Game.prototype = {
 		//Adding score text to the top left of the screen
 		this.scoreText = this.game.add.bitmapText(15, 15, 'Upheaval', 'Score: 0', 25);
 
+		//Adding current level text to screen
+		this.levelUpdate = this.game.add.bitmapText(this.game.width/2, this.game.height/2, 'Upheaval', 'Level 1', 30);
+		this.levelUpdate.anchor.setTo(0.5);
+		this.game.add.tween(this.levelUpdate).to({alpha: 0}, 500, Phaser.Easing.Linear.None, true, 3000, 0, false);
+
+		//Adding extra message
+		this.levelMessage = this.game.add.bitmapText(this.game.width/2, this.game.height/2 + 35, 'Upheaval', '"Slow and steady"', 24);
+		this.levelMessage.anchor.setTo(0.5);
+		this.levelMessage.alpha = 0;
+
+		//Tweening extra message to appear after a delay
+		var messageOn = this.game.add.tween(this.levelMessage).to({alpha: 1}, 500, Phaser.Easing.Linear.None, true, 1000, 0, false);
+
+		//Tweening the message to disappear on complete of the previous tween
+		messageOn.onComplete.add(function() {
+			this.game.add.tween(this.levelMessage).to({alpha: 0}, 500, Phaser.Easing.Linear.None, true, 1500, 0, false);
+		}, this);
+
 		//Adding sounds to the game that were loaded in preloader.
 		this.jetSound = this.game.add.audio('rocket');
 		this.jetSoundOff = this.game.add.audio('rocketOff');
@@ -103,6 +130,7 @@ SpaceRun.Game.prototype = {
 		this.deathSound = this.game.add.audio('death');
 		this.gameMusic = this.game.add.audio('gameMusic');
 		this.startup = this.game.add.audio('startup');
+		this.levelup = this.game.add.audio('levelup');
 
 		//Start playing game music
 		this.gameMusic.play('', 0, true, 1.5);
@@ -178,53 +206,85 @@ SpaceRun.Game.prototype = {
 	},
 	update: function() {
 
-		//This is set up to increase the fireball spawn rate depending on the score.
-		//Easyiest
-		if(this.score > 10) {
-			this.fireballRate = 1500;
-		}
-		//Easy
-		if(this.score > 25) {
-			this.fireballRate = 1000;
-		}
-		//Easy-Medium
-		if(this.score > 30) {
-			this.fireballRate = 700;
-		}
-		//Medium
-		if(this.score > 40) {
-			this.fireballRate = 500;
-		}
-		//Medium-Slightly Hard
-		if(this.score > 60) {
-			this.fireballRate = 425;
-		}
-		//Medium-Hard
-		if(this.score > 100) {
-			this.fireballRate = 330;
-		}
-		//Hard
-		if(this.score > 150) {
-			this.fireballRate = 250;
-		}
-		//Very Hard
-		if(this.score > 200) {
-			this.fireballRate = 200;
-		}
-		//Impossible. 10 fireballs a second. Ninja skills required.
-		if(this.score > 250) {
-			this.fireballRate = 100;
-		}
-		if(this.score > 300) {
-			this.fireballRate = 70;
-		}
-		if(this.score > 350) {
-		//20 fireballs a second. Endgame.
-			this.fireballRate = 50;
-		}
-		//This would only be workable for beings of a higher form.. or with a 4K resolution...
-		if(this.score > 400) {
-			this.fireballRate = 25;
+		this.diamondSpeed = this.floorSpeed;
+		
+
+		//--------------This is the leveling system--------------
+
+		//Setting up the arrays that hold settings for each level
+		//This is the floor speed
+		var levelSpeed = [-550, -800, -450, -1200, -800, -600, -450, -850];
+		//Secondary message under level number
+		var levelMessage = ["Picking up the pace", "Let's stop this snail business", "Swarm Incoming!!!", "Yee-Haw! Hyperspeed!", "Let's collect ourselves...", "Did someone turn up the gravity?", "Super-fast fireballs inbound Captain", "Go for the high score!"];
+		//Fireball speed
+		var levelFireSpeed = [-600, -900, -550, -1300, -1000, -1100, -2200, -1150];
+		//Fireball spawn rate
+		var levelFireRate = [1000, 500, 100, 400, 400, 450, 800, 300];
+		//Gravity level
+		var levelGravity = [1000, 1000, 1000, 1000, 1000, 2000, 1000, 1000];
+
+		//Enter if statement if score interval reached set 'i' accordingly depending on level.
+		if (this.score >= 50 || this.score >= 115 || this.score >= 165 || this.score >= 190 || this.score >=205 || this.score >=280 || this.score >=305 || this.score >=330) {
+			var i = 0
+			if (this.score >=50) {
+				i=0;
+			}
+			if (this.score >=115) {
+				i=1;
+			}
+			if (this.score >=165) {
+				i=2;
+			}
+			if (this.score >=190) {
+				i=3;
+			}
+			if (this.score >=205) {
+				i=4;
+			}
+			if (this.score >=280) {
+				i=5;
+			}
+			if (this.score >=305) {
+				i=6;
+			}
+			if (this.score >=330) {
+				i=7;
+			}
+			//This ensures it only runs once when new score is reached.
+			if(this.levelUpdate.text == 'Level '+(i+1)) {
+				//Whiteout flash
+				//whiteOut();
+				//Add a delay so no fireballs or diamonds for 4 seconds.
+				this.fireballRate = 4000;
+				this.diamondRate = 4000;
+				//Set up/display/tween text
+				this.levelUpdate.text = 'Level '+(i+2);
+				this.levelUpdate.alpha = 1;
+				this.levelup.play();
+				this.game.add.tween(this.levelUpdate).to({alpha: 0}, 500, Phaser.Easing.Linear.None, true, 2000, 0, false);
+				this.levelMessage.text = levelMessage[i];
+				var messageOn = this.game.add.tween(this.levelMessage).to({alpha: 1}, 500, Phaser.Easing.Linear.None, true, 1000, 0, false);
+
+				//When tween finishes, update all speeds or all elements.
+				messageOn.onComplete.add(function() {
+					whiteOut();
+
+					this.game.add.tween(this.levelMessage).to({alpha: 0}, 500, Phaser.Easing.Linear.None, true, 1500, 0, false);
+					this.fireSpeed = levelFireSpeed[i];
+					this.fireballRate = levelFireRate[i];
+					this.floorSpeed = levelSpeed[i];
+					this.diamondRate = 900;
+					this.diamondSpeed = this.floorSpeed;
+					this.diamonds.setAll('body.velocity.x', this.fireSpeed);
+					this.fireballs.setAll('body.velocity.x', levelFireSpeed[i]);
+					this.background.autoScroll(this.floorSpeed+250, 0);
+					this.foreground.autoScroll(this.floorSpeed+250, 0);
+					this.ground.autoScroll(this.floorSpeed, 0);
+					//Set gravity level
+					this.game.physics.arcade.gravity.y = levelGravity[i];
+				}, this);
+			}
+
 		}
 
 		//This is to allow the player to pause the game.
@@ -299,6 +359,31 @@ SpaceRun.Game.prototype = {
 		//Setting up collision for ship and fireballs. Activates the fireball hit method.
 		this.game.physics.arcade.overlap(this.ship, this.fireballs, this.fireballHit, null, this);
 
+		//Whiteout function at the start of a new level
+		function whiteOut() {
+			//setting up variables for white-out at beginning of game
+			var wbmd, wbackground;
+	
+			//New bitmap Data type to create a new canvas for the white-out effect
+			wbmd = this.game.add.bitmapData(this.game.width, this.game.height);
+		
+			//set fill style to white
+			wbmd.ctx.fillStyle = '#fff';
+		
+			//fill the rectangle.
+			wbmd.ctx.fillRect(0, 0, this.game.width, this.game.height);
+		
+			//Use background to hold the sprite/canvas that was just drawn
+			wbackground = this.game.add.sprite(0, 0, wbmd);
+		
+			//Set opacity to 1
+			wbackground.alpha = 1;
+		
+			//insert and tween opacity out
+			this.game.world.add(wbackground);
+			this.game.add.tween(wbackground).to({alpha: 0}, 350, Phaser.Easing.Linear.None, true, 0, 0, false);
+		}
+
 	},
 	//Shutdown is used to destroy all fireballs and diaminds, and reset scores and timers, to allow new sprites to be created.
 	shutdown: function() {
@@ -309,22 +394,28 @@ SpaceRun.Game.prototype = {
 		this.fireballTimer = 0;
 		//This basically resets the dificulty level.
 		this.fireballRate = 2000;
+		this.fireSpeed = -500;
+		this.diamondSpeed = -450;
+		this.floorSpeed = -450;
 	},
 	createDiamond: function() {
 		//Making the diamond appear on the far right.
+
 		var x = this.game.width;
 		//Set Y position to be random between 50 and height- 192
 		var y = this.game.rnd.integerInRange(50, this.game.world.height - 192);
 
 		//Get the first diamond that getFirstExists is false.
 		var diamond = this.diamonds.getFirstExists(false);
+		//diamond.velocity.x = this.diamondSpeed;
 		//If there's no diamond available, create a new one 
 		if(!diamond) {
-			diamond = new Diamond(this.game, 0, 0);
+			diamond = new Diamond(this.game, 0, 0, this.diamondSpeed);
 			this.diamonds.add(diamond);
 		}
 		//resetting the X and Y of the diamond
 		diamond.reset(x, y);
+		diamond.speed = this.diamondSpeed;
 		//revive is called, which sets the velocity to match that of the ground speed
 		diamond.revive();
 		return diamond;
@@ -355,7 +446,6 @@ SpaceRun.Game.prototype = {
 	},
 	createFireball: function() {
 		//Making the fireball appear on the far right.
-		var speed = -500;
 		var x = this.game.width;
 		//Set Y position to be random between 50 and height- 80
 		var y = this.game.rnd.integerInRange(50, this.game.world.height - 80);
@@ -364,7 +454,7 @@ SpaceRun.Game.prototype = {
 		var fireball = this.fireballs.getFirstExists(false);
 		//If there's no fireball available, create a new one 
 		if(!fireball) {
-			fireball = new Fireball(this.game, 0, 0);
+			fireball = new Fireball(this.game, 0, 0, this.fireSpeed);
 			this.fireballs.add(fireball);
 		}
 		//resetting the X and Y of the diamond

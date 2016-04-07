@@ -41,6 +41,7 @@ SpaceRun.Preload.prototype = {
 		this.load.audio('death', 'assets/audio/death.wav');
 		this.load.audio('cave', 'assets/audio/cave.wav');
 		this.load.audio('startup', 'assets/audio/start.wav');
+		this.load.audio('levelup', 'assets/audio/levelup.wav');
 
 		//Loading the bitmap font that is used in game. The XML tells Phaser the coordinates of each character.
 		this.load.bitmapFont('Upheaval', 'assets/fonts/Upheaval/font.png', 'assets/fonts/Upheaval/font.xml')
